@@ -13,4 +13,11 @@
     "summary": "An exposed MCPJam Inspector API gives RCE, a leaked Jupyter token pivots to a second user, and a root Flask service leaks the SSH keys for root.",
     "url": "writeups/Devhub/devhub.html"
   }
+  {
+    "title": "HTB: Checkpoint",
+    "date": "Oct 2026",
+    "tag": "HackTheBox",
+    "summary": "A windows box that assumes a breach  alex.turner / Checkpoint2024!, which is then used to restore a deleted user called Mark.Davies which had Write access to an SMB Share.",
+    "url": "writeups/Checkpoint/checkpoint.html"
+  }
 ]
