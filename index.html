@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Youssef Ashraf | Security &amp; Networks</title>
+<meta name="description" content="Youssef Ashraf: CPTS-certified networks engineering student at the German University in Cairo, studying for CDSA and OSCP.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Zen+Old+Mincho&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="bg-orb o1" aria-hidden="true"></div>
+<div class="bg-orb o2" aria-hidden="true"></div>
+
+<header class="topnav">
+  <a class="brand" href="index.html">
+    <span class="mark">YA</span>
+    <span class="name">Youssef Ashraf</span>
+    <span class="kanji">白哉</span>
+  </a>
+  <nav class="navlinks" aria-label="Sections">
+    <a href="#about">About</a>
+    <a href="#certs">Certifications</a>
+    <a href="#education">Education</a>
+    <a href="#focus">Focus</a>
+    <a href="writeups.html">Write-ups</a>
+    <a href="#contact">Contact</a>
+  </nav>
+  <button class="theme" id="theme" type="button" aria-label="Toggle color theme"><span class="dot"></span><span id="themelabel">Dark</span></button>
+</header>
+
+<main class="container">
+
+  <section class="hero" id="about">
+    <span class="kanji-watermark" aria-hidden="true">白哉</span>
+    <p class="eyebrow">Offensive &amp; Defensive Security</p>
+    <h1>I break into networks so I can <span class="accent">learn to defend them</span>.</h1>
+    <p class="lead">I'm Youssef, a third-year Networks Engineering student at the German University in Cairo. I hold the HTB CPTS certification and I'm now studying for the CDSA and the OSCP.</p>
+    <div class="btns">
+      <a class="btn p" href="https://profile.hackthebox.com/profile/019d7cae-b767-723a-8b01-3640656a48f5" target="_blank" rel="noopener">View my HTB profile</a>
+      <a class="btn s" href="writeups.html">Read my write-ups</a>
+      <a class="btn s" href="https://www.linkedin.com/in/youssef-ashraf-a97a50333/" target="_blank" rel="noopener">Connect on LinkedIn</a>
+    </div>
+  </section>
+
+  <section class="section" id="certs">
+    <h2 data-reveal>Certifications <span class="tick">／</span> credentials</h2>
+    <div class="grid cols-2">
+      <div class="card" data-reveal>
+        <div class="row"><h3>CPTS: Certified Penetration Testing Specialist</h3><span class="pill">Earned</span></div>
+        <p>Hack The Box, earned 14 Sep 2026. Hands-on penetration testing across web applications, Active Directory and network infrastructure, ending in a practical exam and a professional report.</p>
+        <div class="verify">
+          <span>Certificate ID</span><code id="cid">HTBCERT-7A3D535646</code>
+          <button type="button" id="copy">Copy ID</button>
+          <a href="https://www.hackthebox.com/certificates" target="_blank" rel="noopener">Verify</a>
+        </div>
+        <img class="certimg" alt="HTB Certified Penetration Testing Specialist certificate awarded to Youssef Ashraf Saber, 14 Sep 2026" src="assets/cert.jpg">
+      </div>
+      <div class="grid" style="align-content:start">
+        <div class="card" data-reveal>
+          <div class="row"><h3>CDSA: Certified Defensive Security Analyst</h3><span class="pill w">In progress</span></div>
+          <p>Hack The Box. Studying SOC operations, threat hunting, and defensive analysis.</p>
+        </div>
+        <div class="card" data-reveal>
+          <div class="row"><h3>OSCP: Offensive Security Certified Professional</h3><span class="pill w">In progress</span></div>
+          <p>OffSec. Preparing for the 24-hour practical exam and report.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="education">
+    <h2 data-reveal>Education</h2>
+    <div class="card" data-reveal>
+      <div class="row"><h3>German University in Cairo</h3><span class="pill">3rd year</span></div>
+      <p>B.Sc. in Networks Engineering</p>
+    </div>
+  </section>
+
+  <section class="section" id="focus">
+    <h2 data-reveal>Focus areas</h2>
+    <ul class="tags" data-reveal>
+      <li>Penetration testing</li>
+      <li>Active Directory</li>
+      <li>Web application security</li>
+      <li>Network engineering</li>
+      <li>Detection and monitoring</li>
+      <li>Incident response</li>
+      <li>CTFs and HTB labs</li>
+    </ul>
+  </section>
+
+  <section class="section" id="contact">
+    <h2 data-reveal>Contact</h2>
+    <p class="lead" data-reveal>The quickest way to reach me is <a href="https://www.linkedin.com/in/youssef-ashraf-a97a50333/" target="_blank" rel="noopener">LinkedIn</a>. To see my lab progress and rankings, visit my <a href="https://profile.hackthebox.com/profile/019d7cae-b767-723a-8b01-3640656a48f5" target="_blank" rel="noopener">Hack The Box profile</a>.</p>
+  </section>
+
+  <footer class="site-footer">
+    <span>&copy; <span id="yr">2026</span> Youssef Ashraf</span>
+    <span>Scatter — <em>Senbonzakura</em></span>
+  </footer>
+</main>
+
+<script src="js/main.js"></script>
+</body>
+</html>
