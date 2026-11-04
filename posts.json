@@ -19,5 +19,19 @@
     "tag": "HackTheBox",
     "summary": "A windows box that assumes a breach  alex.turner / Checkpoint2024!, which is then used to restore a deleted user called Mark.Davies which had Write access to an SMB Share.",
     "url": "writeups/Checkpoint/checkpoint.html"
+  },
+  {
+    "title": "HTB: Garfield",
+    "date": "Nov 2026",
+    "tag": "HackTheBox",
+    "summary": "This box assumes a breach scenario with credentials j.arbuckle:Th1sD4mnC4t!@1978",
+    "url": "writeups/Garfield/garfield.html"
+  },
+  {
+    "title": "HTB: Enigma",
+    "date": "Oct 2026",
+    "tag": "HackTheBox",
+    "summary": "An NFS share leaks an onboarding PDF with credentials into RoundCube webmail; an OpenSTAManager arbitrary file upload gives a foothold, and OliveTin command injection on an internal service leads to root.",
+    "url": "writeups/Enigma/enigma.html"
   }
 ]
