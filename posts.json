@@ -33,5 +33,12 @@
     "tag": "HackTheBox",
     "summary": "An NFS share leaks an onboarding PDF with credentials into RoundCube webmail; an OpenSTAManager arbitrary file upload gives a foothold, and OliveTin command injection on an internal service leads to root.",
     "url": "writeups/Enigma/enigma.html"
+  },
+  {
+    "title": "HTB: Bedside",
+    "date": "Nov 2026",
+    "tag": "HackTheBox",
+    "summary": "so we have an http server at beside.htb so going there so looking around the main site is basically useless, so i tried searching for sub-directories, but nothing was found. So looks like th...",
+    "url": "writeups/Bedside/bedside.html"
   }
 ]
